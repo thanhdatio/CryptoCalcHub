@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoCalcHub - Professional Trading Calculators & Fee Rebates</title>
+    <meta name="description" content="Free high-precision crypto liquidation, position sizing, and margin calculators for professional traders.">
+    
+    <!-- Tailwind CSS qua CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            DEFAULT: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- React & Babel qua CDN để chạy JSX trực tiếp trên trình duyệt -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div id="root"></div>
+
+    <!-- React Application Component -->
+    <script type="text/babel">
+        const { useState } = React;
+
+        // Component tính toán giá thanh lý
+        function LiquidationCalc({ defaultExchange = 'Bybit' }) {
+            const [exchange, setExchange] = useState(defaultExchange);
+            const [entryPrice, setEntryPrice] = useState(65000);
+            const [leverage, setLeverage] = useState(20);
+            const [positionType, setPositionType] = useState('long');
+            const [marginBalance, setMarginBalance] = useState(1000);
+
+            const calculateLiquidation = () => {
+                const entry = parseFloat(entryPrice);
+                const lev = parseFloat(leverage);
+                if (!entry || !lev || lev <= 0) return 0;
+
+                const mmr = 0.005; // Maintenance margin rate ~0.5%
+                let liqPrice = 0;
+                if (positionType === 'long') {
+                    liqPrice = entry * (1 - (1 / lev) + mmr);
+                } else {
+                    liqPrice = entry * (1 + (1 / lev) - mmr);
+                }
+                return liqPrice > 0 ? liqPrice.toFixed(2) : 0;
+            };
+
+            return (
+                <div className="bg-dark-card border border-dark-border rounded-2xl p-6 shadow-xl">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                            <span>⚡</span> {exchange} Futures Liquidation Calculator
+                        </h2>
+                        <select 
+                            value={exchange} 
+                            onChange={(e) => setExchange(e.target.value)}
+                            className="bg-slate-900 border border-dark-border text-xs rounded-lg px-3 py-1.5 text-slate-300 font-semibold focus:outline-none"
+                        >
+                            <option value="Bybit">Bybit</option>
+                            <option value="Binance">Binance</option>
+                            <option value="OKX">OKX</option>
+                        </select>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-1">Position Type</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button 
+                                    onClick={() => setPositionType('long')}
+                                    className={`py-2 rounded-lg font-semibold transition text-sm ${positionType === 'long' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                >
+                                    Long (Buy)
+                                </button>
+                                <button 
+                                    onClick={() => setPositionType('short')}
+                                    className={`py-2 rounded-lg font-semibold transition text-sm ${positionType === 'short' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                >
+                                    Short (Sell)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-1">Entry Price ($)</label>
+                            <input 
+                                type="number" 
+                                value={entryPrice} 
+                                onChange={(e) => setEntryPrice(e.target.value)}
+                                className="w-full bg-slate-900 border border-dark-border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-1">Leverage ({leverage}x)</label>
+                            <input 
+                                type="range" 
+                                min="1" 
+                                max="125" 
+                                value={leverage} 
+                                onChange={(e) => setLeverage(e.target.value)}
+                                className="w-full accent-emerald-500 mt-2"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-1">Initial Margin ($)</label>
+                            <input 
+                                type="number" 
+                                value={marginBalance} 
+                                onChange={(e) => setMarginBalance(e.target.value)}
+                                className="w-full bg-slate-900 border border-dark-border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-900/80 border border-slate-700/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                            <span className="text-xs text-slate-400 block uppercase tracking-wider">Estimated Liquidation Price</span>
+                            <span className="text-3xl font-black text-amber-400">${calculateLiquidation()}</span>
+                        </div>
+                        <a 
+                            href={`https://partner.${exchange.toLowerCase()}.com/join`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full sm:w-auto text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg transition text-sm"
+                        >
+                            Trade on {exchange} & Save 20% Fees →
+                        </a>
+                    </div>
+                </div>
+            );
+        }
+
+        // Layout ứng dụng chính
+        function App() {
+            return (
+                <div className="min-h-screen flex flex-col justify-between">
+                    {/* Header */}
+                    <header className="border-b border-dark-border py-4 px-6 md:px-12 flex items-center justify-between bg-dark/50 backdrop-blur sticky top-0 z-50">
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl">⚡</span>
+                            <span className="font-black text-xl tracking-wider bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                                CryptoCalcHub
+                            </span>
+                        </div>
+                        <a 
+                            href="https://partner.bybit.com/join" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-500/20 transition"
+                        >
+                            Claim 20% Fee Rebate
+                        </a>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="flex-grow container mx-auto px-4 py-10 max-w-4xl">
+                        <div className="text-center mb-10">
+                            <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3 text-white">
+                                Advanced Crypto Calculators for <span className="text-emerald-400">Professional Traders</span>
+                            </h1>
+                            <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto">
+                                Calculate precise liquidation thresholds, manage position sizing, and optimize trading fees instantly across Binance, Bybit, and OKX.
+                            </p>
+                        </div>
+
+                        {/* Calculator Widget */}
+                        <div className="mb-12">
+                            <LiquidationCalc defaultExchange="Bybit" />
+                        </div>
+
+                        {/* Value Feature Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+                            <div className="bg-dark-card border border-dark-border p-5 rounded-2xl">
+                                <div className="text-2xl mb-2">🛡️</div>
+                                <h3 className="font-bold text-base mb-1 text-white">Risk Management</h3>
+                                <p className="text-xs text-slate-400">Compute exact margin requirements and liquidation buffers instantly.</p>
+                            </div>
+                            <div className="bg-dark-card border border-dark-border p-5 rounded-2xl">
+                                <div className="text-2xl mb-2">💰</div>
+                                <h3 className="font-bold text-lg mb-1 text-white">VIP Fee Rebates</h3>
+                                <p className="text-xs text-slate-400">Save up to 20% on taker and maker fees across top global exchanges.</p>
+                            </div>
+                            <div className="bg-dark-card border border-dark-border p-5 rounded-2xl">
+                                <div className="text-2xl mb-2">⚡</div>
+                                <h3 className="font-bold text-lg mb-1 text-white">Lightning Fast</h3>
+                                <p className="text-xs text-slate-400">Zero server latency. Client-side JS execution ensures instant calculations.</p>
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="border-t border-dark-border py-6 px-6 text-center text-xs text-slate-500">
+                        <p>© 2026 CryptoCalcHub. Built for global crypto traders. Not financial advice.</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        // Render ứng dụng vào DOM
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
